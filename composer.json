@@ -1,0 +1,26 @@
+{
+    "name": "landers/laravel-upload",
+    "description": "laravel-upload",
+    "keywords": ["Landers", "laravel-upload"],
+    "type": "library",
+    "license": "MIT",
+    "homepage": "http://x1982.com",
+    "require": {
+        "php": ">=7.0"
+    },
+    "authors": [
+        {
+            "name": "Landers",
+            "email": "i@x1982.com"
+        }
+    ],
+    "autoload": {
+        "classmap": [
+        ],
+        "files": [
+        ],
+        "psr-4": {
+            "Landers\\LaravelUpload\\": "src"
+        }
+    }
+}
