@@ -3,8 +3,8 @@ namespace Landers\LaravelUpload;
 
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\Request;
-use Overtrue\LaravelUEditor\Events\Uploaded;
-use Overtrue\LaravelUEditor\Events\Uploading;
+use Landers\LaravelUpload\Events\Uploaded;
+use Landers\LaravelUpload\Events\Uploading;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
  */
 class StorageManager
 {
-    use UrlResolverTrait;
+    use \Landers\LaravelUpload\Traits\UrlResolverTrait;
 
     /**
      * @var \Illuminate\Contracts\Filesystem\Filesystem
@@ -59,20 +59,17 @@ class StorageManager
 
         $this->store($file, $filename);
 
-        $response = [
-            'urls' => [
-                'original' => $this->getUrl($filename),
-                'small' => $this->getUrl($filename),
-                'mini' => $this->getUrl($filename),
-            ],
+        $result = [
+            'url' => $this->getUrl($filename),
             'size' => $file->getSize(),
         ];
 
+        //img_small_w
         if ($this->eventSupport()) {
-            event(new Uploaded($file, $response));
+            event( new Uploaded($result) );
         }
 
-        return build_api_data( $response );
+        return build_api_data( $result );
     }
 
     /**

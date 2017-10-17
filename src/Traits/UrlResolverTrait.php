@@ -9,7 +9,7 @@
  * with this source code in the file LICENSE.
  */
 
-namespace Landers\LaravelUpload;
+namespace Landers\LaravelUpload\Traits;
 
 use Illuminate\Support\Str;
 use League\Flysystem\Adapter\Local as LocalAdapter;
