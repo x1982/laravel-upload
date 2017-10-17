@@ -69,7 +69,7 @@ class StorageManager
             event( new Uploaded($result) );
         }
 
-        return build_api_data( $result );
+        return $result;
     }
 
     /**
@@ -173,7 +173,7 @@ class StorageManager
      */
     protected function error($message)
     {
-        return response()->json(['state' => trans("ueditor::upload.{$message}")]);
+        return trans("ueditor::upload.{$message}");
     }
 
     /**
