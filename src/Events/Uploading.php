@@ -14,7 +14,7 @@ namespace Landers\LaravelUpload\Events;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Illuminate\Http\UploadedFile;
 
 /**
  * Class Uploading.
@@ -44,10 +44,10 @@ class Uploading
      * Uploading constructor.
      *
      * @param \Symfony\Component\HttpFoundation\File\UploadedFile $file
-     * @param  string $filename
-     * @param array  array $config
+     * @param                                                     $filename
+     * @param array                                               $config
      */
-    public function __construct(UploadedFile $file, string $filename, array $config)
+    public function __construct(UploadedFile $file, $filename, array $config)
     {
         $this->file = $file;
         $this->filename = $filename;

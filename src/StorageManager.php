@@ -5,7 +5,8 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\Request;
 use Landers\LaravelUpload\Events\Uploaded;
 use Landers\LaravelUpload\Events\Uploading;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Illuminate\Http\UploadedFile;
+use Intervention\Image\Facades\Image;
 
 /**
  * Class StorageManager.
@@ -13,6 +14,8 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 class StorageManager
 {
     use \Landers\LaravelUpload\Traits\UrlResolverTrait;
+    use \Landers\LaravelUpload\Traits\ImageHandlerTrait;
+    use \Landers\LaravelUpload\Traits\FileTypesTrait;
 
     /**
      * @var \Illuminate\Contracts\Filesystem\Filesystem
@@ -34,7 +37,7 @@ class StorageManager
      *
      * @param \Illuminate\Http\Request $request
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return array
      */
     public function upload(Request $request)
     {
@@ -50,7 +53,8 @@ class StorageManager
             return $this->error($error);
         }
 
-        $filename = $this->getFilename($file, $config);
+        $is_original_filename = array_get($config, 'is_original_filename');
+        $filename = $this->getFilename($file, $config, $is_original_filename);
 
         if ($this->eventSupport()) {
             $modifiedFilename = event(new Uploading($file, $filename, $config), [], true);
@@ -61,14 +65,17 @@ class StorageManager
 
         $result = [
             'url' => $this->getUrl($filename),
+            'filename' => $filename,
             'size' => $file->getSize(),
         ];
 
-        //img_small_w
         if ($this->eventSupport()) {
-            event( new Uploaded($result) );
+            event( new Uploaded($file, $result) );
         }
 
+        $this->handleIfImage( $file, $config, $result );
+
+        unset( $result['filename'] );
         return $result;
     }
 
@@ -105,6 +112,7 @@ class StorageManager
     {
         $error = false;
 
+        // 基本检查
         if (!$file->isValid()) {
             $error = $file->getError();
         } elseif ( $max_size = array_get($config, 'max_size', 0)) {
@@ -119,6 +127,15 @@ class StorageManager
             }
         }
 
+        //图片检查
+        if ( $this->isImageType( $file ) ) {
+            if ( $this->imageMinHasError( $file, $config) ) {
+                $error = 'upload.ERROR_LESS_THAN_MIN_SIZE';
+            } elseif ( $this->imageMaxHasError( $file, $config ) ){
+                $error = 'upload.ERROR_GREATER_THAN_MAX_SIZE';
+            }
+        }
+
         return $error;
     }
 
@@ -130,19 +147,15 @@ class StorageManager
      *
      * @return string
      */
-    protected function getFilename(UploadedFile $file, array $config)
+    protected function getFilename(UploadedFile $file, array $config, $is_original_filename = false, $interfere = '')
     {
         $ext = '.'.$file->getClientOriginalExtension();
 
-        if (  array_get($config, 'is_original_filename') ) {
-            $original_filename = \Illuminate\Support\Facades\Request::input('filename');
-        } else {
-            $original_filename = '';
-        }
-
         $save_path = array_get( $config, 'save_path');
 
-        $filename = !$original_filename ? md5($file->getFilename()).$ext : $file->getClientOriginalName();
+        $filename = !$is_original_filename ?
+                    md5($file->getFilename() . $interfere).$ext :
+                    $file->getClientOriginalName();
 
         $path_format = array_get( $config, 'path_format');
         $file_path = $save_path . $this->formatPath($path_format, $filename);

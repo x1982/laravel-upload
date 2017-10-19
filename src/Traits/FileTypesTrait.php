@@ -4,7 +4,7 @@ namespace Landers\LaravelUpload\Traits;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 
-trait FileTypes
+trait FileTypesTrait
 {
     /**
      * 匹配文件类型
@@ -23,7 +23,7 @@ trait FileTypes
      * @param UploadedFile $file
      * @param array $types
      */
-    private function isImageType(UploadedFile $file)
+    protected function isImageType(UploadedFile $file)
     {
         return $this->matchFileType($file, [
             'jpg', 'jpeg', 'gif', 'png', '.bmp'
@@ -35,7 +35,7 @@ trait FileTypes
      * @param UploadedFile $file
      * @return bool
      */
-    private function isAudioType(UploadedFile $file)
+    protected function isAudioType(UploadedFile $file)
     {
         return $this->matchFileType($file, [
             'mp3'

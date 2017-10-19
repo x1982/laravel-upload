@@ -6,7 +6,8 @@
     "license": "MIT",
     "homepage": "http://x1982.com",
     "require": {
-        "php": ">=7.0"
+        "php": ">=7.0",
+        "intervention/image": "^2.4"
     },
     "authors": [
         {
