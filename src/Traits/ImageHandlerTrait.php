@@ -12,7 +12,7 @@ trait ImageHandlerTrait
      * @param null $font_name
      * @return string
      */
-    private function getMarkerFontFile( $font_name = null )
+    private function getDefaultMarkerFontFile( $font_name = null )
     {
         return dirname(__DIR__) . '/Resources/PingFang.ttc';
     }
@@ -20,7 +20,7 @@ trait ImageHandlerTrait
     /**
      * 取得遮罩图
      */
-    private function getMaskImage()
+    private function getDefaultMaskImage()
     {
         return dirname(__DIR__) . '/Resources/water.png';
     }
@@ -84,7 +84,8 @@ trait ImageHandlerTrait
         }
 
         // 生成迷你图
-        if ( $result['url_small'] && $result['url_small'] !== $result['url']) {
+        $url_small = array_get($result, 'url_small');
+        if ( $url_small && $url_small !== array_get($result, 'url') ) {
             if ( $this->buildMini( $image ) ) {
                 $mini_filename = $this->getFilename( $file, $config, false, 'mini' );
                 $this->saveImageResource( $image, $mini_filename );
@@ -176,10 +177,37 @@ trait ImageHandlerTrait
      */
     protected function buildMarkWarterWithImage( $image, array $config )
     {
-        //$mask_image = $this->getMaskImage();
-        //$image->mask( $mask_image );
+        $img_is_mark_img = array_get( $config, 'img_is_mark_img', false );
+        $img_mark_img = array_get( $config, 'img_mark_img' );
+        if ( !$img_is_mark_img || !$img_mark_img ) return false;
 
-        return true;
+        $img_mark_img_position = array_get( $config, 'img_mark_img_position', 9 );
+        $img_mark_img_margin = array_get( $config, 'img_mark_img_margin', 0 );
+        $img_mark_img_offset_x = array_get( $config, 'img_mark_img_offset_x', 0 );
+        $img_mark_img_offset_y = array_get( $config, 'img_mark_img_offset_y', 0 );
+
+        //$mask_image = $this->getDefaultMaskImage( );
+        $mask_image = $_SERVER['DOCUMENT_ROOT'] . $img_mark_img;
+
+        // 水印位置
+        $positions = [
+            '1' => 'top-left',
+            '2' => 'top',
+            '3' => 'top-right',
+            '4' => 'left',
+            '5' => 'center',
+            '6' => 'right',
+            '7' => 'bottom-left',
+            '8' => 'bottom',
+            '9' => 'bottom-right',
+        ];
+        $position = $positions[(string)$img_mark_img_position];
+
+        $offset_x = $img_mark_img_margin + $img_mark_img_offset_x;
+        $offset_y = $img_mark_img_margin + $img_mark_img_offset_y;
+
+        $image->insert( $mask_image, $position, $offset_x, $offset_y );
+
     }
 
     /**
@@ -197,11 +225,10 @@ trait ImageHandlerTrait
         // 准备参数
         $img_mark_text_position = array_get( $config, 'img_mark_text_position', 9 );
         $img_mark_text_font_size = array_get( $config, 'img_mark_text_font_size', 20 );
-        $img_mark_text_font_color = array_get( $config, 'img_mark_text_font_color', [255, 255, 255, 0.3]);
+        $img_mark_text_font_color = array_get( $config, 'img_mark_text_font_color', '255, 255, 255, 0.3');
+        $img_mark_text_font_color = explode(',', $img_mark_text_font_color);
         $img_mark_text_margin = array_get( $config, 'img_mark_text_margin', 0 );
-        $img_mark_text_font_name = array_get( $config, 'img_mark_text_font_name', '');
         $img_mark_text_angle = array_get( $config, 'img_mark_text_angle', 0 );
-        $img_mark_text_alpha = array_get( $config, 'img_mark_text_alpha', 100 );
         $img_mark_text_offset = [
             'x' => array_get( $config, 'img_mark_text_offset_x', 0 ),
             'y' => array_get( $config, 'img_mark_text_offset_y', 0 ),
@@ -216,13 +243,12 @@ trait ImageHandlerTrait
             $img_mark_text_font_color,
             $img_mark_text_margin,
             $img_mark_text_offset,
-            $img_mark_text_font_name,
             $img_mark_text_angle
         );
 
         $img_mark_text_offset['x'] -= 1;
         $img_mark_text_offset['y'] -= 1;
-        $img_mark_text_font_color = [0, 0, 0, 0.3];
+        $img_mark_text_font_color = [0, 0, 0, $img_mark_text_font_color[3]];
         $this->buildMarkTextWarter(
             $image,
             $img_mark_text,
@@ -231,7 +257,6 @@ trait ImageHandlerTrait
             $img_mark_text_font_color,
             $img_mark_text_margin,
             $img_mark_text_offset,
-            $img_mark_text_font_name,
             $img_mark_text_angle
         );
 
@@ -258,14 +283,13 @@ trait ImageHandlerTrait
         $font_color = '#000000',
         int $margin = 0,
         array $offset,
-        string $font_name = '',
         int $text_angle = 0
     ){
         // 原图尺寸
         $original_size = $this->getImageSize( $image );
 
         // 水印文字字体文件
-        $font_file = $this->getMarkerFontFile( $font_name );
+        $font_file = $this->getDefaultMarkerFontFile( );
 
         // 水印文字尺寸
         $marker_size = $this->getTextMarkerSize(
@@ -312,6 +336,7 @@ trait ImageHandlerTrait
     {
         $img_min_width = array_get($config, 'img_min_width', false);
         $img_min_height = array_get($config, 'img_min_height', false);
+
         if ($img_min_width && $img_min_height) {
             $fso = app(\Illuminate\Filesystem\Filesystem::class);
             $content = $fso->get($file->getPathname());
@@ -320,9 +345,11 @@ trait ImageHandlerTrait
                 $image->width() < $img_min_width ||
                 $image->height() < $img_min_height
             ) {
-                return false;
+                return true;
             }
         }
+
+        return false;
     }
 
     /**
@@ -342,9 +369,11 @@ trait ImageHandlerTrait
                 $image->width() > $img_max_width ||
                 $image->height() > $img_max_height
             ) {
-                return false;
+                return true;
             }
         }
+
+        return false;
     }
 
     /**
@@ -365,7 +394,7 @@ trait ImageHandlerTrait
         /*
          * $a是个8个元素的数组，如下：
          * 6,7(左上)		4,5(右上)
-         * 0,1(左下		2,3(右下)
+         * 0,1(左下)		2,3(右下)
          */
         $a = imagettfbbox($font_size, $angle, $font_file, $text);
 

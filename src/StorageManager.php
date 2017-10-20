@@ -67,6 +67,8 @@ class StorageManager
             'url' => $this->getUrl($filename),
             'filename' => $filename,
             'size' => $file->getSize(),
+            'extension' => $file->getClientOriginalExtension(),
+            'type' => $file->getMimeType()
         ];
 
         if ($this->eventSupport()) {
@@ -117,22 +119,26 @@ class StorageManager
             $error = $file->getError();
         } elseif ( $max_size = array_get($config, 'max_size', 0)) {
             if ( $file->getSize() > $max_size * 1024 ) {
-                $error = 'upload.ERROR_SIZE_EXCEED';
+                //$error = 'upload.ERROR_SIZE_EXCEED';
+                $error = "文件大小超过限制：{$max_size} KB";
             }
         } elseif ($allow_types = array_get($config, 'allow_types')) {
             $allow_types = explode(',', $allow_types);
             $extension = $file->getClientOriginalExtension();
             if ( !in_array( $extension, $allow_types )) {
-                $error = 'upload.ERROR_TYPE_NOT_ALLOWED';
+                //$error = 'upload.ERROR_TYPE_NOT_ALLOWED';
+                $error = "文件类型不支持";
             }
         }
 
         //图片检查
         if ( $this->isImageType( $file ) ) {
             if ( $this->imageMinHasError( $file, $config) ) {
-                $error = 'upload.ERROR_LESS_THAN_MIN_SIZE';
+                //$error = 'upload.ERROR_LESS_THAN_MIN_SIZE';
+                $error = '图片尺寸过小';
             } elseif ( $this->imageMaxHasError( $file, $config ) ){
-                $error = 'upload.ERROR_GREATER_THAN_MAX_SIZE';
+                //$error = 'upload.ERROR_GREATER_THAN_MAX_SIZE';
+                $error = '图片尺寸太大';
             }
         }
 
@@ -157,8 +163,7 @@ class StorageManager
                     md5($file->getFilename() . $interfere).$ext :
                     $file->getClientOriginalName();
 
-        $path_format = array_get( $config, 'path_format');
-        $file_path = $save_path . $this->formatPath($path_format, $filename);
+        $file_path = $this->formatPath($save_path, $filename);
 
         return $file_path;
     }
@@ -186,7 +191,8 @@ class StorageManager
      */
     protected function error($message)
     {
-        return trans("ueditor::upload.{$message}");
+        //return trans("ueditor::upload.{$message}");
+        return $message;
     }
 
     /**
