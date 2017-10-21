@@ -19,6 +19,7 @@
         "classmap": [
         ],
         "files": [
+            "src/helpers.php"
         ],
         "psr-4": {
             "Landers\\LaravelUpload\\": "src"
