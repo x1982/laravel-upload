@@ -6,7 +6,9 @@ function landers_upload_convert_input( $data, bool $is_multi )
     }
 
     if ( $data && !$is_multi ) {
-        $data = $data[0];
+        if ( array_key_exists(0, $data) ) {
+            $data = $data[0];
+        }
     }
 
     if ( $data ) {
