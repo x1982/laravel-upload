@@ -163,8 +163,8 @@ trait ImageHandlerTrait
         $img_is_small = array_get( $config, 'img_is_small', false );
         $img_small_is_delete_original = array_get( $config, 'img_small_is_delete_original', false );
         if ( $img_is_small && $img_small_is_delete_original ) {
-            unset( $result['url'] );
             $this->disk->delete( $result['filename'] );
+            $result['url'] = $result['url_small'];
         }
 
         return true;
