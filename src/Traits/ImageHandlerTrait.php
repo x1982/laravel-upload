@@ -14,15 +14,18 @@ trait ImageHandlerTrait
      */
     private function getDefaultMarkerFontFile( $font_name = null )
     {
-        return dirname(__DIR__) . '/Resources/PingFang.ttc';
+        return dirname(__DIR__) . '/Resources/msyh.ttf';
     }
 
     /**
      * 取得遮罩图
      */
-    private function getDefaultMaskImage()
+    private function getDefaultMaskImage( $img = null )
     {
-        return dirname(__DIR__) . '/Resources/water.png';
+        if ( $img ) {
+            $img = $_SERVER['DOCUMENT_ROOT'] . $img;
+        }
+        return is_file( $img ) ? $img : dirname(__DIR__) . '/Resources/water.png';
     }
 
     /**
@@ -61,16 +64,16 @@ trait ImageHandlerTrait
      * @param UploadedFile $file
      * @param array $config
      */
-    protected function handleIfImage( UploadedFile $file, array $config, array &$result )
+    protected function storeWithIfHandleImage( UploadedFile $file, array $config, array &$result )
     {
         // 原始上传图片
         $original_filename = array_get( $result, 'filename');
-        $resource = $this->disk->get( $original_filename );
+        $resource = fopen($file->getRealPath(), 'r+');
         $image = Image::make( $resource );
         $image->backup('original');
 
         // 处理原图 - 生成水印文字
-        $this->buildMarkWarterWithText($image, $config, $result);
+        $this->buildMarkWarterWithText($image, $config);
         // 处理原图 - 生成水印图
         $this->buildMarkWarterWithImage($image, $config);
         $this->saveImageResource( $image, $original_filename );
@@ -186,8 +189,7 @@ trait ImageHandlerTrait
         $img_mark_img_offset_x = array_get( $config, 'img_mark_img_offset_x', 0 );
         $img_mark_img_offset_y = array_get( $config, 'img_mark_img_offset_y', 0 );
 
-        //$mask_image = $this->getDefaultMaskImage( );
-        $mask_image = $_SERVER['DOCUMENT_ROOT'] . $img_mark_img;
+        $mask_image = $this->getDefaultMaskImage( $img_mark_img );
 
         // 水印位置
         $positions = [
@@ -216,24 +218,23 @@ trait ImageHandlerTrait
      * @param array $config
      * @return bool|string
      */
-    protected function buildMarkWarterWithText( $image, array $config, array $result )
+    protected function buildMarkWarterWithText( $image, array $config )
     {
         $img_is_mark_text = array_get( $config, 'img_is_mark_text', false );
         $img_mark_text = array_get( $config, 'img_mark_text' );
         if ( !$img_is_mark_text || !$img_mark_text ) return false;
 
         // 准备参数
-        $img_mark_text_position = array_get( $config, 'img_mark_text_position', 9 );
-        $img_mark_text_font_size = array_get( $config, 'img_mark_text_font_size', 20 );
-        $img_mark_text_font_color = array_get( $config, 'img_mark_text_font_color', '255, 255, 255, 0.3');
-        $img_mark_text_font_color = explode(',', $img_mark_text_font_color);
-        $img_mark_text_margin = array_get( $config, 'img_mark_text_margin', 0 );
-        $img_mark_text_angle = array_get( $config, 'img_mark_text_angle', 0 );
+        $img_mark_text = str_replace('{DOMAIN}', env('APP_URL'), $img_mark_text);
+        $img_mark_text_position = (int)array_get( $config, 'img_mark_text_position');
+        $img_mark_text_font_size = (int)array_get( $config, 'img_mark_text_font_size');
+        $img_mark_text_font_color = (string)array_get( $config, 'img_mark_text_font_color');
+        $img_mark_text_margin = (int)array_get( $config, 'img_mark_text_margin');
+        $img_mark_text_angle = (int)array_get( $config, 'img_mark_text_angle');
         $img_mark_text_offset = [
-            'x' => array_get( $config, 'img_mark_text_offset_x', 0 ),
-            'y' => array_get( $config, 'img_mark_text_offset_y', 0 ),
+            'x' => (int)array_get( $config, 'img_mark_text_offset_x'),
+            'y' => (int)array_get( $config, 'img_mark_text_offset_y'),
         ];
-
         // 取得原图信息
         $this->buildMarkTextWarter(
             $image,
@@ -248,7 +249,7 @@ trait ImageHandlerTrait
 
         $img_mark_text_offset['x'] -= 1;
         $img_mark_text_offset['y'] -= 1;
-        $img_mark_text_font_color = [0, 0, 0, $img_mark_text_font_color[3]];
+        $img_mark_text_font_color = [0, 0, 0, array_get($img_mark_text_font_color, 3, 0.3)];
         $this->buildMarkTextWarter(
             $image,
             $img_mark_text,
@@ -278,13 +279,29 @@ trait ImageHandlerTrait
     private function buildMarkTextWarter(
         &$image,
         string $text,
-        int $position = 9,
-        int $font_size = 20,
-        $font_color = '#000000',
-        int $margin = 0,
+        int $position,
+        int $font_size,
+        $font_color,
+        int $margin,
         array $offset,
-        int $text_angle = 0
+        int $text_angle
     ){
+        $position or $position = 9;
+        $font_size or $font_size = 20;
+        $margin or $margin = 0;
+        $offset or $offset = [0, 0];
+        $text_angle or $text_angle = 0;
+        $font_color or $font_color = '255, 255, 255, 0.3';
+        if ( is_string($font_color) ) $font_color = explode(',', $font_color );
+
+        if ( count($font_color) != 4 ) {
+            throw new \Exception('颜色值异常');
+        }
+
+        //dp([
+        //    compact('position', 'font_size', 'margin', 'offset', 'text_angle', 'font_color')
+        //]);
+
         // 原图尺寸
         $original_size = $this->getImageSize( $image );
 

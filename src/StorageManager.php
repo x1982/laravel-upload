@@ -61,7 +61,7 @@ class StorageManager
             $filename = !is_null($modifiedFilename) ? $modifiedFilename : $filename;
         }
 
-        $this->store($file, $filename);
+        //$this->store($file, $filename);
 
         $result = [
             'url' => $this->getUrl($filename),
@@ -70,12 +70,11 @@ class StorageManager
             'extension' => $file->getClientOriginalExtension(),
             'type' => $file->getMimeType()
         ];
+        $this->storeWithIfHandleImage( $file, $config, $result );
 
         if ($this->eventSupport()) {
             event( new Uploaded($file, $result) );
         }
-
-        $this->handleIfImage( $file, $config, $result );
 
         unset( $result['filename'] );
         return $result;
