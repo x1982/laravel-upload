@@ -11,7 +11,7 @@ function landers_upload_convert_input( $data, bool $is_multi )
         }
     }
 
-    if ( $data ) {
+    if ( is_array($data) ) {
         $data = json_encode($data);
     }
 
