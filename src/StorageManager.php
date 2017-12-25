@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Landers\LaravelUpload\Events\Uploaded;
 use Landers\LaravelUpload\Events\Uploading;
 use Illuminate\Http\UploadedFile;
-use Intervention\Image\Facades\Image;
+//use Intervention\Image\Facades\Image;
 
 /**
  * Class StorageManager.
@@ -37,7 +37,7 @@ class StorageManager
      *
      * @param \Illuminate\Http\Request $request
      *
-     * @return array
+     * @return array|string
      */
     public function upload(Request $request)
     {
@@ -91,12 +91,12 @@ class StorageManager
     /**
      * Store file.
      *
-     * @param \Symfony\Component\HttpFoundation\File\UploadedFile $file
-     * @param string                                              $filename
+     * @param UploadedFile $file
+     * @param string $filename
      *
      * @return mixed
      */
-    protected function store(UploadedFile $file, $filename)
+    protected function store(UploadedFile $file, string $filename)
     {
         return $this->disk->put($filename, fopen($file->getRealPath(), 'r+'));
     }
@@ -104,7 +104,7 @@ class StorageManager
     /**
      * Validate the input file.
      *
-     * @param \Symfony\Component\HttpFoundation\File\UploadedFile $file
+     * @param UploadedFile $file
      * @param array                                               $config
      *
      * @return bool|string
@@ -147,12 +147,13 @@ class StorageManager
     /**
      * Get the new filename of file.
      *
-     * @param \Symfony\Component\HttpFoundation\File\UploadedFile $file
+     * @param UploadedFile $file
      * @param array $config
-     *
-     * @return string
+     * @param bool $is_original_filename
+     * @param string $interfere
+     * @return mixed
      */
-    protected function getFilename(UploadedFile $file, array $config, $is_original_filename = false, $interfere = '')
+    protected function getFilename(UploadedFile $file, array $config, bool $is_original_filename = false, string $interfere = '')
     {
         $ext = '.'.$file->getClientOriginalExtension();
 
@@ -170,7 +171,7 @@ class StorageManager
     /**
      * Get configuration of current action.
      *
-     * @param string $action
+     * @param string $key
      *
      * @return array
      */
@@ -186,9 +187,9 @@ class StorageManager
      *
      * @param $message
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return string
      */
-    protected function error($message)
+    protected function error( string $message)
     {
         //return trans("ueditor::upload.{$message}");
         return $message;
