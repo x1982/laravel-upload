@@ -2,25 +2,34 @@
 
 namespace Landers\LaravelUpload\Traits;
 
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Http\UploadedFile;
 use Intervention\Image\Facades\Image;
+use Intervention\Image\Image as ImageClass;
+use Intervention\Image\Gd\Font;
 
+/**
+ * Trait ImageHandlerTrait
+ * @package Landers\LaravelUpload\Traits
+ * @property Filesystem $disk
+ */
 trait ImageHandlerTrait
 {
     /**
      * 取得字体文件
-     * @param null $font_name
      * @return string
      */
-    private function getDefaultMarkerFontFile( $font_name = null )
+    private function getDefaultMarkerFontFile( )
     {
         return dirname(__DIR__) . '/Resources/msyh.ttf';
     }
 
     /**
      * 取得遮罩图
+     * @param string|null $img
+     * @return string
      */
-    private function getDefaultMaskImage( $img = null )
+    private function getDefaultMaskImage( string $img = null )
     {
         if ( $img ) {
             $img = $_SERVER['DOCUMENT_ROOT'] . $img;
@@ -30,10 +39,12 @@ trait ImageHandlerTrait
 
     /**
      * 保存资源
+     * @param ImageClass $image
      * @param string $filename
-     * @return mixed
+     * @param bool $is_complete
+     * @return int
      */
-    private function saveImageResource( $image, string $filename, $is_complete = false )
+    private function saveImageResource( ImageClass $image, string $filename, bool $is_complete = false )
     {
         $resource = $image->encode(null, 86);
         $result = $this->disk->put($filename, $resource);
@@ -50,7 +61,7 @@ trait ImageHandlerTrait
      * @param $image
      * @return array
      */
-    private function getImageSize( $image )
+    private function getImageSize( ImageClass $image )
     {
         return [
             'width' => $image->width(),
@@ -63,6 +74,7 @@ trait ImageHandlerTrait
      * 如果是图片的话进行处理
      * @param UploadedFile $file
      * @param array $config
+     * @param array $result
      */
     protected function storeWithIfHandleImage( UploadedFile $file, array $config, array &$result )
     {
@@ -70,7 +82,7 @@ trait ImageHandlerTrait
         $original_filename = array_get( $result, 'filename');
         $resource = fopen($file->getRealPath(), 'r+');
         $type = array_get($result, 'type');
-        if ( !strpos('image', $type) ) {
+        if ( strpos($type,'image') === false ) {
             return;
         }
 
@@ -112,12 +124,12 @@ trait ImageHandlerTrait
      * @param array $config
      * @return bool|string
      */
-    protected function buildSmall( $image, array $config )
+    protected function buildSmall( ImageClass $image, array $config )
     {
         $img_is_small = array_get( $config, 'img_is_small', false );
         $img_small_width = array_get( $config, 'img_small_width', false );
         $img_small_height = array_get( $config, 'img_small_height', false );
-        $img_small_is_scale = array_get( $config, 'img_small_is_scale', false );
+        $img_small_mode = array_get( $config, 'img_small_mode', false );
         $dist_size = [
             'width' => $img_small_width,
             'height' => $img_small_height
@@ -131,21 +143,36 @@ trait ImageHandlerTrait
         // 取得原图尺寸
         $original_size = $this->getImageSize( $image );
 
-        // 计算目标图尺寸
-        $size = $this->zoomSize( $img_small_is_scale, $original_size, $dist_size );
+        $is_scale = $img_small_mode == 'SCALE';
 
-        // 设整图片大小
-        $image->resize($size['width'], $size['height']);
+        if ( $is_scale ) {
+            // 计算目标图尺寸
+            $size = $this->zoomSize( $is_scale, $original_size, $dist_size );
 
+            // 设整图片大小
+            $image->resize($size['width'], $size['height']);
+
+        } else {
+            // 计算目标图尺寸
+            $tmp_size = $this->zoomSize( true, $original_size, $dist_size, false );
+
+            // 设整图片大小
+            $image->resize($tmp_size['width'], $tmp_size['height']);
+
+            // 裁剪
+            $image->crop($dist_size['width'], $dist_size['height']);
+
+        }
         return true;
     }
 
     /**
      * 生成迷你图
-     * @param $image
+     * @param ImageClass $image
      * @param int $dist_size
+     * @return bool
      */
-    protected function buildMini( $image, $dist_size = 100 )
+    protected function buildMini( ImageClass $image, int $dist_size = 100 )
     {
         // 取得原图尺寸
         $image_size = $this->getImageSize( $image );
@@ -165,6 +192,7 @@ trait ImageHandlerTrait
      * 删除原图
      * @param array $config
      * @param $result
+     * @return bool
      */
     protected function deleteOriginal( array $config, &$result )
     {
@@ -180,10 +208,11 @@ trait ImageHandlerTrait
 
     /**
      * 用水印图生成水印效
-     * @param $image
+     * @param ImageClass $image
      * @param array $config
+     * @return bool
      */
-    protected function buildMarkWarterWithImage( $image, array $config )
+    protected function buildMarkWarterWithImage( ImageClass $image, array $config )
     {
         $img_is_mark_img = array_get( $config, 'img_is_mark_img', false );
         $img_mark_img = array_get( $config, 'img_mark_img' );
@@ -214,7 +243,7 @@ trait ImageHandlerTrait
         $offset_y = $img_mark_img_margin + $img_mark_img_offset_y;
 
         $image->insert( $mask_image, $position, $offset_x, $offset_y );
-
+        return true;
     }
 
     /**
@@ -230,7 +259,7 @@ trait ImageHandlerTrait
         if ( !$img_is_mark_text || !$img_mark_text ) return false;
 
         // 准备参数
-        $img_mark_text = str_replace('{DOMAIN}', env('APP_URL'), $img_mark_text);
+        $img_mark_text = str_replace('{DOMAIN}', config('app.url'), $img_mark_text);
         $img_mark_text_position = (int)array_get( $config, 'img_mark_text_position');
         $img_mark_text_font_size = (int)array_get( $config, 'img_mark_text_font_size');
         $img_mark_text_font_color = (string)array_get( $config, 'img_mark_text_font_color');
@@ -254,7 +283,7 @@ trait ImageHandlerTrait
 
         $img_mark_text_offset['x'] -= 1;
         $img_mark_text_offset['y'] -= 1;
-        $img_mark_text_font_color = [0, 0, 0, array_get($img_mark_text_font_color, 3, 0.3)];
+        $img_mark_text_font_color = [0, 0, 0, array_get(explode(',', $img_mark_text_font_color), 3, 0.3)];
         $this->buildMarkTextWarter(
             $image,
             $img_mark_text,
@@ -271,18 +300,19 @@ trait ImageHandlerTrait
 
     /**
      * 在指定的image对象上生成文字水印
-     * @param $image
+     *
+     * @param ImageClass $image
      * @param string $text
      * @param int $position
      * @param int $font_size
-     * @param string $font_color
+     * @param $font_color
      * @param int $margin
      * @param array $offset
-     * @param string $font_name
      * @param int $text_angle
+     * @throws \Exception
      */
     private function buildMarkTextWarter(
-        &$image,
+        ImageClass &$image,
         string $text,
         int $position,
         int $font_size,
@@ -334,7 +364,7 @@ trait ImageHandlerTrait
         $position_y = $marker_position['y'] + array_get($offset, 'y', 0);
 
         // 写入水印
-        $image->text($text, $position_x, $position_y, function($font) use (
+        $image->text($text, $position_x, $position_y, function(Font $font) use (
             $font_file,
             $font_size,
             $font_color,
@@ -351,8 +381,10 @@ trait ImageHandlerTrait
 
     /**
      * 图片最小尺寸是否错误
+     *
      * @param UploadedFile $file
      * @param array $config
+     * @return bool
      */
     protected function imageMinHasError( UploadedFile $file, array $config )
     {
@@ -360,7 +392,7 @@ trait ImageHandlerTrait
         $img_min_height = array_get($config, 'img_min_height', false);
 
         if ($img_min_width && $img_min_height) {
-            $fso = app(\Illuminate\Filesystem\Filesystem::class);
+            $fso = app(Filesystem::class);
             $content = $fso->get($file->getPathname());
             $image = Image::make($content);
             if (
@@ -378,6 +410,7 @@ trait ImageHandlerTrait
      * 图片最小尺寸是否错误
      * @param UploadedFile $file
      * @param array $config
+     * @return bool
      */
     protected function imageMaxHasError( UploadedFile $file, array $config )
     {
@@ -433,11 +466,9 @@ trait ImageHandlerTrait
      * 计算水印位置
      * @param array $img_size
      * @param array $mark_size
-     * @param int $pos
+     * @param int $position
      * @param int $margin
-     * @param int $mode
      * @return array|int
-     * @throws \Exception
      */
     private function getMarkerPosition(
         array $img_size,
@@ -484,32 +515,46 @@ trait ImageHandlerTrait
      * @param bool $is_scale
      * @param array $original_size
      * @param array $dist_size
+     * @param bool $is_inner
      * @return array
      */
-    private function zoomSize(bool $is_scale, array $original_size, array $dist_size){
+    private function zoomSize(bool $is_scale, array $original_size, array $dist_size, bool $is_inner = true){
         $w1 = $original_size['width'];
         $h1 = $original_size['height'];
         $w2 = $dist_size['width'];
         $h2 = $dist_size['height'];
 
-        if ( $is_scale ){
-            $w = null; $h = null;
-            if ($w2 > 0 && $h2 > 0){
-                if ( $w1 / $h1 >= $w2 / $h2){
-                    if ($w1 > $w2) {
-                        $w = $w2;
-                        $h = ($w2 * $h1) / $w1;
+        if ( $is_scale ) {
+            $w = null;
+            $h = null;
+            if ($w2 > 0 && $h2 > 0) {
+                if ($is_inner) {
+                    if ($w1 / $h1 >= $w2 / $h2) {
+                        if ($w1 > $w2) {
+                            $w = $w2;
+                            $h = ($w2 * $h1) / $w1;
+                        } else {
+                            $w = $w1;
+                            $h = $h1;
+                        }
                     } else {
-                        $w = $w1;
-                        $h = $h1;
+                        if ($h1 > $h2) {
+                            $h = $h2;
+                            $w = ($w1 * $h2) / $h1;
+                        } else {
+                            $w = $w1;
+                            $h = $h1;
+                        }
                     }
                 } else {
-                    if ($h1 > $h2) {
+                    $k1 = $w1 / $h1;
+                    $k2 = $w2 / $h2;
+                    if ($k1 > $k2) {
                         $h = $h2;
-                        $w = ($w1 * $h2) / $h1;
+                        $w = $h2 * $k1;
                     } else {
-                        $w = $w1;
-                        $h = $h1;
+                        $w = $w2;
+                        $h = $w2 / $k1;
                     }
                 }
             } else {
