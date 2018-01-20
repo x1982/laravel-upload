@@ -69,6 +69,11 @@ trait ImageHandlerTrait
         // 原始上传图片
         $original_filename = array_get( $result, 'filename');
         $resource = fopen($file->getRealPath(), 'r+');
+        $type = array_get($result, 'type');
+        if ( !strpos('image', $type) ) {
+            return;
+        }
+
         $image = Image::make( $resource );
         $image->backup('original');
 

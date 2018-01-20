@@ -65,6 +65,7 @@ class StorageManager
 
         $result = [
             'url' => $this->getUrl($filename),
+            'originalName' => $file->getClientOriginalName(),
             'filename' => $filename,
             'size' => $file->getSize(),
             'extension' => $file->getClientOriginalExtension(),
