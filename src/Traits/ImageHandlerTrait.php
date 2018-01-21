@@ -97,19 +97,26 @@ trait ImageHandlerTrait
 
         // 生成小图(缩略图)
         $image->reset('original');
-        if ( $this->buildSmall( $image, $config ) ) {
-            $small_filename = $this->getFilename( $file, $config, false, 'small' );
-            $this->saveImageResource( $image, $small_filename );
-            $result['url_small'] = $this->getUrl( $small_filename );
+        if ( array_get( $config, 'img_is_small' ) ) {
+            $img_small_width = array_get( $config, 'img_small_width' );
+            $img_small_height = array_get( $config, 'img_small_height' );
+            $img_small_mode = array_get( $config, 'img_small_mode' );
+            if ( $this->buildSmall( $image, $img_small_mode,  $img_small_width, $img_small_height) ) {
+                $small_filename = $this->getFilename( $file, $config, false, 'small' );
+                $this->saveImageResource( $image, $small_filename );
+                $result['url_small'] = $this->getUrl( $small_filename );
+            }
         }
 
         // 生成迷你图
-        $url_small = array_get($result, 'url_small');
-        if ( $url_small && $url_small !== array_get($result, 'url') ) {
-            if ( $this->buildMini( $image ) ) {
-                $mini_filename = $this->getFilename( $file, $config, false, 'mini' );
-                $this->saveImageResource( $image, $mini_filename );
-                $result['url_mini'] = $this->getUrl( $mini_filename );
+        if ( array_get( $config, 'img_is_small_mini' ) ) {
+            $url_small = array_get($result, 'url_small');
+            if ($url_small && $url_small !== array_get($result, 'url')) {
+                if ($this->buildMini($image)) {
+                    $mini_filename = $this->getFilename($file, $config, false, 'mini');
+                    $this->saveImageResource($image, $mini_filename);
+                    $result['url_mini'] = $this->getUrl($mini_filename);
+                }
             }
         }
 
@@ -124,26 +131,17 @@ trait ImageHandlerTrait
      * @param array $config
      * @return bool|string
      */
-    protected function buildSmall( ImageClass $image, array $config )
+    protected function buildSmall( ImageClass $image, string $mode,  int $width, int $height )
     {
-        $img_is_small = array_get( $config, 'img_is_small', false );
-        $img_small_width = array_get( $config, 'img_small_width', false );
-        $img_small_height = array_get( $config, 'img_small_height', false );
-        $img_small_mode = array_get( $config, 'img_small_mode', false );
         $dist_size = [
-            'width' => $img_small_width,
-            'height' => $img_small_height
+            'width' => $width,
+            'height' => $height
         ];
-
-        // 未达到生民缩略图条件, 则用原始文件代替缩略图
-        if ( !$img_is_small || !$img_small_width || !$img_small_height) {
-            return false;
-        }
 
         // 取得原图尺寸
         $original_size = $this->getImageSize( $image );
 
-        $is_scale = $img_small_mode == 'SCALE';
+        $is_scale = $mode == 'SCALE';
 
         if ( $is_scale ) {
             // 计算目标图尺寸
