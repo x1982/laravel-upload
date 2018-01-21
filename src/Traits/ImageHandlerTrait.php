@@ -90,9 +90,43 @@ trait ImageHandlerTrait
         $image->backup('original');
 
         // 处理原图 - 生成水印文字
-        $this->buildMarkWarterWithText($image, $config);
+
+        $img_is_mark_text = (bool)((int)array_get( $config, 'img_is_mark_text' ));
+        $img_mark_text = (string)array_get( $config, 'img_mark_text' );
+        if ( $img_is_mark_text && $img_mark_text) {
+            $img_mark_text = str_replace('{DOMAIN}', config('app.url'), $img_mark_text);
+            $img_mark_text_position = (int)array_get( $config, 'img_mark_text_position');
+            $img_mark_text_font_size = (int)array_get( $config, 'img_mark_text_font_size');
+            $img_mark_text_font_color = (string)array_get( $config, 'img_mark_text_font_color');
+            $img_mark_text_margin = (int)array_get( $config, 'img_mark_text_margin');
+            $img_mark_text_angle = (int)array_get( $config, 'img_mark_text_angle');
+            $img_mark_text_offset_x = (int)array_get( $config, 'img_mark_text_offset_x');
+            $img_mark_text_offset_y = (int)array_get( $config, 'img_mark_text_offset_y');
+            $this->buildMarkWarterWithText($image,
+                $img_mark_text, $img_mark_text_position, $img_mark_text_font_size,
+                $img_mark_text_font_color, $img_mark_text_margin, $img_mark_text_angle,
+                $img_mark_text_offset_x, $img_mark_text_offset_y
+            );
+
+        }
+
+
         // 处理原图 - 生成水印图
-        $this->buildMarkWarterWithImage($image, $config);
+        $img_is_mark_img = (bool)((int)array_get( $config, 'img_is_mark_img' ));
+        $img_mark_img = (string)array_get( $config, 'img_mark_img' );
+        if ( $img_is_mark_img || $img_mark_img ) {
+            $img_mark_img_position = (int)array_get( $config, 'img_mark_img_position');
+            $img_mark_img_margin = (int)array_get( $config, 'img_mark_img_margin' );
+            $img_mark_img_offset_x = (int)array_get( $config, 'img_mark_img_offset_x');
+            $img_mark_img_offset_y = (int)array_get( $config, 'img_mark_img_offset_y');
+            $this->buildMarkWarterWithImage($image,
+                $img_mark_img, $img_mark_img_position,
+                $img_mark_img_margin, $img_mark_img_offset_x,
+                $img_mark_img_offset_y
+            );
+        }
+
+        // 保存原图
         $this->saveImageResource( $image, $original_filename );
 
         // 生成小图(缩略图)
@@ -210,18 +244,15 @@ trait ImageHandlerTrait
      * @param array $config
      * @return bool
      */
-    protected function buildMarkWarterWithImage( ImageClass $image, array $config )
-    {
-        $img_is_mark_img = array_get( $config, 'img_is_mark_img', false );
-        $img_mark_img = array_get( $config, 'img_mark_img' );
-        if ( !$img_is_mark_img || !$img_mark_img ) return false;
-
-        $img_mark_img_position = array_get( $config, 'img_mark_img_position', 9 );
-        $img_mark_img_margin = array_get( $config, 'img_mark_img_margin', 0 );
-        $img_mark_img_offset_x = array_get( $config, 'img_mark_img_offset_x', 0 );
-        $img_mark_img_offset_y = array_get( $config, 'img_mark_img_offset_y', 0 );
-
-        $mask_image = $this->getDefaultMaskImage( $img_mark_img );
+    protected function buildMarkWarterWithImage(
+        ImageClass $image,
+        string $img,
+        int $position,
+        int $margin,
+        int $offset_x,
+        int $offset_y
+    ){
+        $mask_image = $this->getDefaultMaskImage( $img );
 
         // 水印位置
         $positions = [
@@ -235,10 +266,10 @@ trait ImageHandlerTrait
             '8' => 'bottom',
             '9' => 'bottom-right',
         ];
-        $position = $positions[(string)$img_mark_img_position];
+        $position = $positions[(string)$position];
 
-        $offset_x = $img_mark_img_margin + $img_mark_img_offset_x;
-        $offset_y = $img_mark_img_margin + $img_mark_img_offset_y;
+        $offset_x = $margin + $offset_x;
+        $offset_y = $margin + $offset_y;
 
         $image->insert( $mask_image, $position, $offset_x, $offset_y );
         return true;
@@ -246,51 +277,29 @@ trait ImageHandlerTrait
 
     /**
      * 用文本生成水印效
-     * @param $image
+     * @param ImageClass $image
      * @param array $config
      * @return bool|string
      */
-    protected function buildMarkWarterWithText( $image, array $config )
-    {
-        $img_is_mark_text = array_get( $config, 'img_is_mark_text', false );
-        $img_mark_text = array_get( $config, 'img_mark_text' );
-        if ( !$img_is_mark_text || !$img_mark_text ) return false;
-
-        // 准备参数
-        $img_mark_text = str_replace('{DOMAIN}', config('app.url'), $img_mark_text);
-        $img_mark_text_position = (int)array_get( $config, 'img_mark_text_position');
-        $img_mark_text_font_size = (int)array_get( $config, 'img_mark_text_font_size');
-        $img_mark_text_font_color = (string)array_get( $config, 'img_mark_text_font_color');
-        $img_mark_text_margin = (int)array_get( $config, 'img_mark_text_margin');
-        $img_mark_text_angle = (int)array_get( $config, 'img_mark_text_angle');
-        $img_mark_text_offset = [
-            'x' => (int)array_get( $config, 'img_mark_text_offset_x'),
-            'y' => (int)array_get( $config, 'img_mark_text_offset_y'),
-        ];
+    protected function buildMarkWarterWithText(
+        ImageClass $image,
+        string $text,
+        int $position,
+        int $size,
+        string $color,
+        int $margin,
+        int $angle,
+        int $offset_x,
+        int $offset_y
+    ){
         // 取得原图信息
         $this->buildMarkTextWarter(
-            $image,
-            $img_mark_text,
-            $img_mark_text_position,
-            $img_mark_text_font_size,
-            $img_mark_text_font_color,
-            $img_mark_text_margin,
-            $img_mark_text_offset,
-            $img_mark_text_angle
+            $image, $text, $position, $size, $color, $margin, $offset_x, $offset_y, $angle
         );
 
-        $img_mark_text_offset['x'] -= 1;
-        $img_mark_text_offset['y'] -= 1;
-        $img_mark_text_font_color = [0, 0, 0, array_get(explode(',', $img_mark_text_font_color), 3, 0.3)];
+        $color = [0, 0, 0, array_get(explode(',', $color), 3, 0.3)];
         $this->buildMarkTextWarter(
-            $image,
-            $img_mark_text,
-            $img_mark_text_position,
-            $img_mark_text_font_size,
-            $img_mark_text_font_color,
-            $img_mark_text_margin,
-            $img_mark_text_offset,
-            $img_mark_text_angle
+            $image, $text, $position, $size, $color, $margin, $offset_x-1, $offset_y-1, $angle
         );
 
         return true;
@@ -316,13 +325,13 @@ trait ImageHandlerTrait
         int $font_size,
         $font_color,
         int $margin,
-        array $offset,
+        int $offset_x,
+        int $offset_y,
         int $text_angle
     ){
         $position or $position = 9;
         $font_size or $font_size = 20;
         $margin or $margin = 0;
-        $offset or $offset = [0, 0];
         $text_angle or $text_angle = 0;
         $font_color or $font_color = '255, 255, 255, 0.3';
         if ( is_string($font_color) ) $font_color = explode(',', $font_color );
@@ -358,8 +367,8 @@ trait ImageHandlerTrait
         );
 
         // 水印位置偏移
-        $position_x = $marker_position['x'] + array_get($offset, 'x', 0);
-        $position_y = $marker_position['y'] + array_get($offset, 'y', 0);
+        $position_x = $marker_position['x'] + $offset_x;
+        $position_y = $marker_position['y'] + $offset_y;
 
         // 写入水印
         $image->text($text, $position_x, $position_y, function(Font $font) use (
