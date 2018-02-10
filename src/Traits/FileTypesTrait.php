@@ -47,7 +47,7 @@ trait FileTypesTrait
      * @param UploadedFile $file
      * @return bool
      */
-    private function isVideoType(UploadedFile $file)
+    protected function isVideoType(UploadedFile $file)
     {
         return $this->matchFileType($file, [
             'mp4'
