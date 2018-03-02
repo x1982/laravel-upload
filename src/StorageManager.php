@@ -53,7 +53,9 @@ class StorageManager
             return $this->error($error);
         }
 
-        $is_original_filename = array_get($config, 'is_original_filename');
+        // 尚未处理好 与is_original_filename相关的逻辑，暂时先全部用false
+        // $is_original_filename = array_get($config, 'is_original_filename');
+        $is_original_filename = false;
         $filename = $this->getFilename($file, $config, $is_original_filename);
 
         if ($this->eventSupport()) {

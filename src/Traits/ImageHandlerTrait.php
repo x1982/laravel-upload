@@ -19,7 +19,7 @@ trait ImageHandlerTrait
      * 取得字体文件
      * @return string
      */
-    private function getDefaultMarkerFontFile( )
+    private function getMarkerFont( )
     {
         return dirname(__DIR__) . '/Resources/msyh.ttf';
     }
@@ -27,14 +27,18 @@ trait ImageHandlerTrait
     /**
      * 取得遮罩图
      * @param string|null $img
-     * @return string
+     * @return string|null
      */
-    private function getDefaultMaskImage( string $img = null )
+    private function getMarkerImage( string $img = null )
     {
-        if ( $img ) {
-            $img = $_SERVER['DOCUMENT_ROOT'] . $img;
+        if ( !$img ) return null;
+
+        $img_file = base_path($img);
+        if ( !is_file($img_file) ) {
+            $img_file = dirname(__DIR__) . "/Resources/{$img}";
         }
-        return is_file( $img ) ? $img : dirname(__DIR__) . '/Resources/water.png';
+
+        return is_file($img_file) ? $img_file : null;
     }
 
     /**
@@ -113,8 +117,8 @@ trait ImageHandlerTrait
 
         // 处理原图 - 生成水印图
         $img_is_mark_img = (bool)((int)array_get( $config, 'img_is_mark_img' ));
-        $img_mark_img = (string)array_get( $config, 'img_mark_img' );
-        if ( $img_is_mark_img || $img_mark_img ) {
+        if ( $img_is_mark_img ) {
+            $img_mark_img = (string)array_get( $config, 'img_mark_img' );
             $img_mark_img_position = (int)array_get( $config, 'img_mark_img_position');
             $img_mark_img_margin = (int)array_get( $config, 'img_mark_img_margin' );
             $img_mark_img_offset_x = (int)array_get( $config, 'img_mark_img_offset_x');
@@ -252,7 +256,9 @@ trait ImageHandlerTrait
         int $offset_x,
         int $offset_y
     ){
-        $mask_image = $this->getDefaultMaskImage( $img );
+        if (!$mask_image = $this->getMarkerImage( $img )){
+            return false;
+        }
 
         // 水印位置
         $positions = [
@@ -348,7 +354,7 @@ trait ImageHandlerTrait
         $original_size = $this->getImageSize( $image );
 
         // 水印文字字体文件
-        $font_file = $this->getDefaultMarkerFontFile( );
+        $font_file = $this->getMarkerFont( );
 
         // 水印文字尺寸
         $marker_size = $this->getTextMarkerSize(
