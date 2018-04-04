@@ -2,6 +2,7 @@
 namespace Landers\LaravelUpload;
 
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Landers\LaravelUpload\Events\Uploaded;
 use Landers\LaravelUpload\Events\Uploading;
@@ -22,6 +23,12 @@ class StorageManager
      */
     protected $disk;
 
+
+    /**
+     * @var Model $config
+     */
+    protected $config;
+
     /**
      * Constructor.
      *
@@ -30,6 +37,9 @@ class StorageManager
     public function __construct(Filesystem $disk)
     {
         $this->disk = $disk;
+
+        $config = config('myams.upload.config');
+        $this->config = app($config);
     }
 
     /**
@@ -193,10 +203,14 @@ class StorageManager
      */
     protected function getUploadConfig( string $key)
     {
-        $config = app(UploadConfigModel::class)->findOrFail($key)->toArray();
+        $config = $this->config
+            ->findOrFail($key)
+            ->toArray();
+
         $config['field_names'] = [
             'file', 'upfile'
         ];
+
         return $config;
     }
 
