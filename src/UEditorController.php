@@ -25,7 +25,7 @@ class UEditorController extends LaravelUEditorController
                 /**
                  * @var StorageManager $storage
                  */
-                $storage_disk = myams_config('upload.disk', 'public');
+                $storage_disk = config('myams.upload.disk', 'public');
                 $disk = Storage::disk($storage_disk);
                 $storage = new StorageManager($disk);
                 return $storage->upload($request);
