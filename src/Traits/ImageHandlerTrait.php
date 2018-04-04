@@ -17,11 +17,19 @@ trait ImageHandlerTrait
 {
     /**
      * 取得字体文件
-     * @return string
+     *
+     * @param $font_family
+     * @return null|string
      */
-    private function getMarkerDefaultFont( )
+    private function getMarkerFont($font_family)
     {
-        return dirname(__DIR__) . '/Resources/arial.ttf';
+        if ($font_family) {
+            $font_file = base_path($font_family);
+        } else {
+            $font_file = dirname(__DIR__) . '/Resources/arial.ttf';
+        }
+
+        return is_file($font_file) ? $font_file : null;
     }
 
     /**
@@ -358,7 +366,9 @@ trait ImageHandlerTrait
         $original_size = $this->getImageSize( $image );
 
         // 水印文字字体文件
-        $font_file = $font_family ? base_path($font_family) : $this->getMarkerDefaultFont();
+        if (!$this->getMarkerFont($font_family)) {
+            return;
+        }
 
         // 水印文字尺寸
         $marker_size = $this->getTextMarkerSize(
