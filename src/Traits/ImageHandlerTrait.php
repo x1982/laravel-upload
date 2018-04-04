@@ -19,9 +19,9 @@ trait ImageHandlerTrait
      * 取得字体文件
      * @return string
      */
-    private function getMarkerFont( )
+    private function getMarkerDefaultFont( )
     {
-        return dirname(__DIR__) . '/Resources/msyh.ttf';
+        return dirname(__DIR__) . '/Resources/arial.ttf';
     }
 
     /**
@@ -102,13 +102,15 @@ trait ImageHandlerTrait
             $img_mark_text_position = (int)array_get( $config, 'img_mark_text_position');
             $img_mark_text_font_size = (int)array_get( $config, 'img_mark_text_font_size');
             $img_mark_text_font_color = (string)array_get( $config, 'img_mark_text_font_color');
+            $img_mark_text_font_family = (string)array_get( $config, 'img_mark_text_font_family');
             $img_mark_text_margin = (int)array_get( $config, 'img_mark_text_margin');
             $img_mark_text_angle = (int)array_get( $config, 'img_mark_text_angle');
             $img_mark_text_offset_x = (int)array_get( $config, 'img_mark_text_offset_x');
             $img_mark_text_offset_y = (int)array_get( $config, 'img_mark_text_offset_y');
             $this->buildMarkWarterWithText($image,
                 $img_mark_text, $img_mark_text_position, $img_mark_text_font_size,
-                $img_mark_text_font_color, $img_mark_text_margin, $img_mark_text_angle,
+                $img_mark_text_font_color, $img_mark_text_font_family,
+                $img_mark_text_margin, $img_mark_text_angle,
                 $img_mark_text_offset_x, $img_mark_text_offset_y
             );
 
@@ -293,6 +295,7 @@ trait ImageHandlerTrait
         int $position,
         int $size,
         string $color,
+        string $family,
         int $margin,
         int $angle,
         int $offset_x,
@@ -300,12 +303,12 @@ trait ImageHandlerTrait
     ){
         // 取得原图信息
         $this->buildMarkTextWarter(
-            $image, $text, $position, $size, $color, $margin, $offset_x, $offset_y, $angle
+            $image, $text, $position, $size, $color, $family, $margin, $offset_x, $offset_y, $angle
         );
 
         $color = [0, 0, 0, array_get(explode(',', $color), 3, 0.3)];
         $this->buildMarkTextWarter(
-            $image, $text, $position, $size, $color, $margin, $offset_x-1, $offset_y-1, $angle
+            $image, $text, $position, $size, $color, $family, $margin, $offset_x-1, $offset_y-1, $angle
         );
 
         return true;
@@ -330,6 +333,7 @@ trait ImageHandlerTrait
         int $position,
         int $font_size,
         $font_color,
+        $font_family,
         int $margin,
         int $offset_x,
         int $offset_y,
@@ -354,7 +358,7 @@ trait ImageHandlerTrait
         $original_size = $this->getImageSize( $image );
 
         // 水印文字字体文件
-        $font_file = $this->getMarkerFont( );
+        $font_file = $font_family ? base_path($font_family) : $this->getMarkerDefaultFont();
 
         // 水印文字尺寸
         $marker_size = $this->getTextMarkerSize(
