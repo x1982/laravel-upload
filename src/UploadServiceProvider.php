@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Landers\LaravelAms\Facades\Route;
 
-class EventServiceProvider extends ServiceProvider
+class UploadServiceProvider extends ServiceProvider
 {
     /**
      * The event listener mappings for the application.
@@ -29,9 +29,10 @@ class EventServiceProvider extends ServiceProvider
     public function boot()
     {
 
+        Route::any('/ueditor', 'Landers\LaravelUpload\UEditorController@upload');
         // $this->replaceStorageManager();
 
-        Route::any('/ueditor', 'Landers\LaravelUpload\UEditorController@upload');
+        parent::boot();
     }
 
     private function replaceStorageManager()

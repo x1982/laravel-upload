@@ -41,13 +41,21 @@ class StorageManager
      */
     public function upload(Request $request)
     {
-        $config = $this->getUploadConfig($request->get('key'));
+        $key = $request->get('key', '1e617715a68693450baa01be80695e34');
+        $config = $this->getUploadConfig($key);
 
-        if (!$request->hasFile($config['field_name'])) {
+        $field_name = null;
+        foreach ($config['field_names'] as $item) {
+            if ($request->hasFile($item)) {
+                $field_name = $item;
+                break;
+            }
+        }
+        if (!$field_name) {
             return $this->error('UPLOAD_ERR_NO_FILE');
         }
 
-        $file = $request->file($config['field_name']);
+        $file = $request->file($field_name);
 
         if ($error = $this->fileHasError($file, $config)) {
             return $this->error($error);
@@ -71,7 +79,12 @@ class StorageManager
             'filename' => $filename,
             'size' => $file->getSize(),
             'extension' => $file->getClientOriginalExtension(),
-            'type' => $file->getMimeType()
+            'type' => $file->getMimeType(),
+
+            // ueditor
+            'original' => $file->getClientOriginalName(),
+            'state' => 'SUCCESS',
+            'title' => $filename,
         ];
         $this->storeWithIfHandleImage( $file, $config, $result );
 
@@ -181,7 +194,9 @@ class StorageManager
     protected function getUploadConfig( string $key)
     {
         $config = app(UploadConfigModel::class)->findOrFail($key)->toArray();
-        $config['field_name'] = 'file';
+        $config['field_names'] = [
+            'file', 'upfile'
+        ];
         return $config;
     }
 
@@ -194,8 +209,7 @@ class StorageManager
      */
     protected function error( string $message)
     {
-        //return trans("ueditor::upload.{$message}");
-        return $message;
+        return trans("ueditor::upload.{$message}");
     }
 
     /**
@@ -223,5 +237,47 @@ class StorageManager
         }
 
         return $path;
+    }
+
+    /**
+     * List all files of dir. (为百度编辑器所需）
+     *
+     * @param string $path
+     * @param int    $start
+     * @param int    $size
+     * @param array  $allowFiles
+     *
+     * @return array
+     */
+    public function listFiles($path, $start, $size = 20, array $allowFiles = [])
+    {
+        $allFiles = $this->disk->listContents($path, true);
+        $files = $this->paginateFiles($allFiles, $start, $size);
+
+        return [
+            'state' => empty($files) ? 'EMPTY' : 'SUCCESS',
+            'list' => $files,
+            'start' => $start,
+            'total' => count($allFiles),
+        ];
+    }
+
+    /**
+     * Split results.(为百度编辑器所需）
+     *
+     * @param array $files
+     * @param int   $start
+     * @param int   $size
+     *
+     * @return array
+     */
+    protected function paginateFiles(array $files, $start = 0, $size = 50)
+    {
+        return collect($files)->where('type', 'file')->splice($start)->take($size)->map(function ($file) {
+            return [
+                'url' => $this->getUrl($file['path']),
+                'mtime' => $file['timestamp'],
+            ];
+        })->all();
     }
 }
