@@ -366,7 +366,7 @@ trait ImageHandlerTrait
         $original_size = $this->getImageSize( $image );
 
         // 水印文字字体文件
-        if (!$this->getMarkerFont($font_family)) {
+        if (!$font_file = $this->getMarkerFont($font_family)) {
             return;
         }
 
