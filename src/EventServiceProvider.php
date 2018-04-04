@@ -1,9 +1,8 @@
 <?php
 namespace Landers\LaravelUpload;
 
-use Illuminate\Support\Facades\Event;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
-use Landers\LaravelAms\Facades\Route;
+use Illuminate\Support\Facades\Route;
 
 class EventServiceProvider extends ServiceProvider
 {
